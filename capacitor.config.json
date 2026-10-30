@@ -1,0 +1,8 @@
+{
+  "appId": "com.aradee3.weeklywallet",
+  "appName": "محفظتي الأسبوعية",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}
