@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#102b27"><meta name="description" content="تابع ميزانيتك الأسبوعية ومصروفاتك بسهولة">
+<title>محفظتي الأسبوعية</title>
+<style>
+:root{color-scheme:light;--bg:#f4f6f3;--ink:#172b27;--muted:#718078;--green:#176b52;--line:#e5ebe6;--red:#b84b43}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+header{background:#102b27;color:white;padding:26px 20px 30px;border-radius:0 0 25px 25px}header .sub{opacity:.72;font-size:13px}h1{font-size:23px;margin:4px 0 20px}
+.wrap{max-width:620px;margin:auto;padding:16px}.card{background:white;border:1px solid var(--line);border-radius:18px;padding:17px;margin-bottom:14px;box-shadow:0 5px 20px #142b2110}
+label{display:block;font-size:13px;color:var(--muted);margin:0 0 7px}input,button{font:inherit}input{width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--ink);outline-color:var(--green)}
+.row{display:flex;gap:9px;align-items:end}.row>div{flex:1;min-width:0}button{border:0;border-radius:11px;padding:12px 15px;background:var(--green);color:#fff;font-weight:650;cursor:pointer}button.secondary{background:#edf4ef;color:var(--green)}button.danger{background:#fff0ef;color:var(--red)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stat{background:#f5f8f5;padding:13px;border-radius:13px}.stat small{display:block;color:var(--muted);font-size:12px}.stat strong{display:block;font-size:21px;margin-top:5px;direction:ltr;text-align:right}
+.section-title{font-size:16px;font-weight:750;margin:2px 0 13px}.day{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}.day:last-child{border:0}.day strong{display:block}.day small{color:var(--muted)}.money{font-weight:750;direction:ltr;text-align:left}.negative{color:var(--red)}.positive{color:var(--green)}
+.expense{padding:10px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px}.expense:last-child{border:0}.expense small{display:block;color:var(--muted)}.empty{color:var(--muted);font-size:13px;text-align:center;padding:18px}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:8px 0 24px}
+@media(min-width:520px){.stats{grid-template-columns:repeat(2,1fr)}}
+</style></head>
+<body>
+<header><div class="sub">إدارة مصروفاتك ببساطة</div><h1>محفظتي الأسبوعية</h1><div class="sub" id="periodLabel">ميزانيتك من السبت إلى الجمعة</div></header>
+<main class="wrap">
+<section class="card">
+<div class="row"><div><label for="budget">الميزانية الأسبوعية (ريال)</label><input id="budget" type="number" min="0" step="0.01" placeholder="مثال: 700"></div><button id="saveBudget">حفظ الميزانية</button></div>
+<div class="row" style="margin-top:12px"><div><label for="weekStart">بداية الأسبوع (السبت)</label><input id="weekStart" type="date"></div></div>
+</section>
+<section class="card"><div class="stats">
+<div class="stat"><small>ميزانية الأسبوع</small><strong id="totalBudget">0.00 ر.س</strong></div>
+<div class="stat"><small>إجمالي المصروف</small><strong id="spent">0.00 ر.س</strong></div>
+<div class="stat"><small>المتبقي / العجز</small><strong id="remaining">0.00 ر.س</strong></div>
+<div class="stat"><small>الحصة اليومية الأساسية</small><strong id="daily">0.00 ر.س</strong></div>
+</div></section>
+<section class="card"><div class="section-title">إضافة مصروف</div>
+<div style="margin-bottom:10px"><label for="expenseName">وصف المصروف</label><input id="expenseName" maxlength="80" placeholder="مثال: قهوة أو مقاضي"></div>
+<div class="row"><div><label for="expenseAmount">المبلغ (ريال)</label><input id="expenseAmount" type="number" min="0.01" step="0.01" placeholder="0.00"></div><div><label for="expenseDate">اليوم</label><input id="expenseDate" type="date"></div><button id="addExpense">إضافة</button></div>
+</section>
+<section class="card"><div class="section-title">توزيع الميزانية اليومية</div><div id="days"></div></section>
+<section class="card"><div class="section-title">مصروفات الأسبوع</div><div id="expenses"></div></section>
+<div class="row" style="margin-bottom:12px"><button class="secondary" id="export">تصدير نسخة احتياطية</button><button class="danger" id="newWeek">بدء أسبوع جديد</button></div>
+<footer>بياناتك محفوظة محليًا على هذا الجهاز</footer>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const money=n=>Number(n||0).toLocaleString('ar-SA',{minimumFractionDigits:2,maximumFractionDigits:2})+' ر.س';
+const dateOnly=d=>{const x=new Date(d);return new Date(x.getFullYear(),x.getMonth(),x.getDate())};
+const iso=d=>{const x=dateOnly(d);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')};
+function saturday(d){const x=dateOnly(d);x.setDate(x.getDate()-((x.getDay()+1)%7));return x}
+const initial=saturday(new Date());
+let state=JSON.parse(localStorage.getItem('weeklyWallet')||'null')||{budget:700,start:iso(initial),expenses:[]};
+function save(){localStorage.setItem('weeklyWallet',JSON.stringify(state));render()}
+function weekDates(){const s=dateOnly(state.start);return Array.from({length:7},(_,i)=>{const d=new Date(s);d.setDate(d.getDate()+i);return d})}
+function render(){
+$('budget').value=state.budget;$('weekStart').value=state.start;
+const dates=weekDates(),end=dates[6],fmt=d=>d.toLocaleDateString('ar-SA',{day:'numeric',month:'short'});
+$('periodLabel').textContent=fmt(dates[0])+' — '+fmt(end)+' · السبت إلى الجمعة';
+const total=state.expenses.reduce((a,e)=>a+Number(e.amount),0),remaining=Number(state.budget)-total;
+$('totalBudget').textContent=money(state.budget);$('spent').textContent=money(total);$('remaining').textContent=money(remaining);$('remaining').className=remaining<0?'negative':'positive';$('daily').textContent=money(Number(state.budget)/7);
+const spentBy=dates.map(d=>state.expenses.filter(e=>e.date===iso(d)).reduce((a,e)=>a+Number(e.amount),0));
+$('days').innerHTML=dates.map((d,i)=>{const cumulative=spentBy.slice(0,i+1).reduce((a,b)=>a+b,0),balance=Number(state.budget)*(i+1)/7-cumulative;return '<div class="day"><div><strong>'+['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'][i]+'</strong><small>'+fmt(d)+' · مصروف اليوم '+money(spentBy[i])+'</small></div><div class="money '+(balance<0?'negative':'positive')+'">'+money(balance)+'<small style="display:block;font-weight:400;color:#718078">الرصيد المتراكم</small></div></div>'}).join('');
+const sorted=[...state.expenses].sort((a,b)=>b.date.localeCompare(a.date));
+$('expenses').innerHTML=sorted.length?sorted.map(e=>'<div class="expense"><div>'+escapeHtml(e.name||'مصروف')+'<small>'+e.date+'</small></div><div class="money">'+money(e.amount)+' <button class="danger" style="padding:5px 9px;margin-right:5px" data-del="'+e.id+'">حذف</button></div></div>').join(''):'<div class="empty">لا توجد مصروفات مسجلة هذا الأسبوع</div>';
+$('expenses').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{state.expenses=state.expenses.filter(e=>e.id!==b.dataset.del);save()});
+if(!$('expenseDate').value)$('expenseDate').value=iso(new Date());
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+$('saveBudget').onclick=()=>{const n=Number($('budget').value);if(!Number.isFinite(n)||n<0)return alert('أدخل ميزانية صحيحة');state.budget=n;save()};
+$('weekStart').onchange=()=>{if(! $('weekStart').value)return;const d=dateOnly($('weekStart').value);if(d.getDay()!==6){alert('اختر يوم السبت لبداية الأسبوع');$('weekStart').value=state.start;return}state.start=iso(d);save()};
+$('addExpense').onclick=()=>{const name=$('expenseName').value.trim(),amount=Number($('expenseAmount').value),date=$('expenseDate').value;if(!amount||amount<=0||!date)return alert('أدخل المبلغ والتاريخ بشكل صحيح');if(date<state.start||date>iso(weekDates()[6]))return alert('التاريخ خارج الأسبوع الحالي');state.expenses.push({id:String(Date.now()),name,amount,date});$('expenseName').value='';$('expenseAmount').value='';save()};
+$('export').onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='my-weekly-wallet-backup.json';a.click();URL.revokeObjectURL(url)};
+$('newWeek').onclick=()=>{if(!confirm('سيتم بدء أسبوع جديد وتصفير مصروفات الأسبوع الحالي. هل تريد المتابعة؟'))return;const next=dateOnly(state.start);next.setDate(next.getDate()+7);state.start=iso(next);state.expenses=[];save()};
+render();
+</script></body></html>
